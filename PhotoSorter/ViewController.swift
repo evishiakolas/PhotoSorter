@@ -8,7 +8,7 @@
 
 import UIKit
 import Parse
-
+import Photos
 import AssetsLibrary
 
 class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
@@ -27,10 +27,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         testObject.saveInBackgroundWithBlock { (success: Bool, error: NSError?) -> Void in
             println("Object has been saved.")
             
-            self.getPhotoLibraryPhotos(completion: { photos in
-                println(photos)
-                //Set Images in this block.
-            })
+            self.fetchPhotos()
         }
     }
     
@@ -47,56 +44,60 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         
     }
     
-    func getPhotoLibraryPhotos(completion completionBlock : ([UIImage] -> ()))   {
-        let library = ALAssetsLibrary()
-        var count = 0
-        var photos : [UIImage] = []
-        var stopped = false
+   
+        var images:NSMutableArray! // <-- Array to hold the fetched images
+        var totalImageCountNeeded:Int! // <-- The number of images to fetch
         
-        library.enumerateGroupsWithTypes(ALAssetsGroupSavedPhotos, usingBlock: { (group,var stop) -> Void in
+        func fetchPhotos () {
+            images = NSMutableArray()
+            totalImageCountNeeded = 3
+            self.fetchPhotoAtIndexFromEnd(0)
+        }
+        
+        // Repeatedly call the following method while incrementing
+        // the index until all the photos are fetched
+        func fetchPhotoAtIndexFromEnd(index:Int) {
             
-            group?.setAssetsFilter(ALAssetsFilter.allPhotos())
+            let imgManager = PHImageManager.defaultManager()
             
-            group?.enumerateAssetsWithOptions(NSEnumerationOptions.Reverse, usingBlock: {
-                (asset : ALAsset!, index, var stopEnumeration) -> Void in
+            // Note that if the request is not set to synchronous
+            // the requestImageForAsset will return both the image
+            // and thumbnail; by setting synchronous to true it
+            // will return just the thumbnail
+            var requestOptions = PHImageRequestOptions()
+            requestOptions.synchronous = true
+            
+            // Sort the images by creation date
+            var fetchOptions = PHFetchOptions()
+            fetchOptions.sortDescriptors = [NSSortDescriptor(key:"creationDate", ascending: true)]
+            
+            if let fetchResult = PHAsset.fetchAssetsWithMediaType(PHAssetMediaType.Image, options: fetchOptions) {
                 
-                if (!stopped)
-                {
-                    if count >= 50
-                    {
+                // If the fetch result isn't empty,
+                // proceed with the image request
+                if fetchResult.count > 0 {
+                    // Perform the image request
+                    imgManager.requestImageForAsset(fetchResult.objectAtIndex(fetchResult.count - 1 - index) as PHAsset, targetSize: view.frame.size, contentMode: PHImageContentMode.AspectFill, options: requestOptions, resultHandler: { (image, _) in
                         
-                        stopEnumeration.memory = ObjCBool(true)
-                        stop.memory = ObjCBool(true)
-                        completionBlock(photos)
-                        stopped = true
-                    }
-                    else
-                    {
-//                        // For just the thumbnails use the following line.
-//                        let cgImage = asset.thumbnail().takeUnretainedValue()
-//                        
-                        // Use the following line for the full image.
-                        let cgImage = asset.defaultRepresentation().fullScreenImage().takeRetainedValue()
+                        // Add the returned image to your array
+                        self.images.addObject(image)
                         
-                        if let photo = UIImage(CGImage: cgImage) {
-                            photos.append(photo)
-                            count += 1
+                        // If you haven't already reached the first
+                        // index of the fetch result and if you haven't
+                        // already stored all of the images you need,
+                        // perform the fetch request again with an
+                        // incremented index
+                        if index + 1 < fetchResult.count && self.images.count < self.totalImageCountNeeded {
+                            self.fetchPhotoAtIndexFromEnd(index + 1)
+                        } else {
+                            // Else you have completed creating your array
+                            println("Completed array: \(self.images)")
                         }
-                    }
+                    })
                 }
-                
-            })
-            
-            },failureBlock : { error in
-                println(error)
-        })
-    }
-    
-
+            }
 }
-    
-    
    
 
-
+}
 
