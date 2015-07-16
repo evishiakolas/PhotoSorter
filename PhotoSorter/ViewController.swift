@@ -22,13 +22,14 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         
         imagePicker.delegate = self
 
-        let testObject = PFObject(className: "TestObject")
-        testObject["foo"] = "bar"
-        testObject.saveInBackgroundWithBlock { (success: Bool, error: NSError?) -> Void in
-            println("Object has been saved.")
+        self.fetchPhotos()
             
-            self.fetchPhotos()
-        }
+            let iphonePhotos = PFObject(className: "iphonePhotos")
+            iphonePhotos["photoNames"] = self.images
+            iphonePhotos.saveInBackgroundWithBlock{
+                (success: Bool!, error: NSError!) -> Void in
+                println("object has been saved")
+            }
     }
     
     
@@ -52,9 +53,44 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             images = NSMutableArray()
             totalImageCountNeeded = 3
             self.fetchPhotoAtIndexFromEnd(0)
+            
+            println( "toString(images.dynamicType) -> \(images.dynamicType)")
+            
         }
-        
-        // Repeatedly call the following method while incrementing
+    
+//    func convertPhotoNamesToJSON () {
+//        
+//        
+//        UIImage *my_image; //your image handle
+//        NSData *data_of_my_image = UIImagePNGRepresentation(my_image);
+//        NSString *base64StringOf_my_image = [data_of_my_image convertToBase64String];
+//        
+//        //now you can add it to your dictionary
+//        NSMutableDictionary *dict = [NSMutableDictionary dictionary];
+//        [dict setObject:base64StringOf_my_image forKey:@"image"];
+//        
+//        if ([NSJSONSerialization isValidJSONObject:dict]) //perform a check
+//        {
+//            NSLog(@"valid object for JSON");
+//            NSError *error = nil;
+//            NSData *jsonData = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:&error];
+//            
+//            
+//            if (error!=nil) {
+//                NSLog(@"Error creating JSON Data = %@",error);
+//            }
+//            else{
+//                NSLog(@"JSON Data created successfully.");
+//            }
+//        }
+//        else{
+//            NSLog(@"not a valid object for JSON");
+//        }
+//        
+//        
+//    }
+    
+    // Repeatedly call the following method while incrementing
         // the index until all the photos are fetched
         func fetchPhotoAtIndexFromEnd(index:Int) {
             
